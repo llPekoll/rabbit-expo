@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Rabbit Royale",
+    "slug": "rabbit-royale",
+    "version": "0.1.0",
+    "orientation": "landscape",
+    "scheme": "rabbitroyale",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.domin8.rabbitroyale",
+      "adaptiveIcon": {
+        "backgroundColor": "#1b2838"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.domin8.rabbitroyale",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "root": "./app"
+      },
+      "apiUrl": "https://ws.rabbit.rip"
+    }
+  }
+}

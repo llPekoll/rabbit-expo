@@ -1,0 +1,19 @@
+# Dependances — 2,3 Go, reinstallables avec `bun install`.
+node_modules/
+
+# Le projet natif, regenere par `bunx expo prebuild` (1 Go).
+# Il n'est PAS versionne tant qu'on n'y met pas de code natif a la main :
+# android/local.properties pointe un SDK propre a chaque machine.
+/android/
+/ios/
+
+# Caches d'outils
+.expo/
+.metro/
+*.log
+
+# Genere par expo-cli
+expo-env.d.ts
+
+# Systeme
+.DS_Store
