@@ -1511,7 +1511,7 @@ export class IslandScene implements Scene {
    * second victory pose: reaching the chest and reaching a raided field are
    * the same beat, and the recap lands on top of both.
    *
-   * MUSIC_VICTORY is literally "Crown Chest Fanfare" — it was loaded for the
+   * MUSIC_VICTORY is literally "crown-chest-fanfare" — it was loaded for the
    * cleared island and is exactly the cue this moment was missing.
    */
   celebrateChest(): void {

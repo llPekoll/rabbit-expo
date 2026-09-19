@@ -418,12 +418,11 @@ const overlayCache = new Map<string, { texture: Texture; anchorY: number }>();
 export function rampOverlay(
   texture: Texture,
   /**
-   * The texture's pixels, as something a canvas can draw. Passed in because
-   * these overlays are baked by the renderer (`TileTextures`) and a render
-   * texture has no image behind it — `renderer.extract.canvas(texture)` is
-   * how a caller gets one.
+   * The texture's pixels. Passed in because these overlays are baked by the
+   * renderer (`TileTextures`) and a render texture has no image behind it —
+   * `getDiamondPixels(texture)` is how a caller gets them.
    */
-  pixels: CanvasImageSource,
+  pixels: ImageData,
   lifts: readonly [number, number, number, number],
   z: number,
   cell: { w: number; h: number },
@@ -436,12 +435,22 @@ export function rampOverlay(
   const room = Math.max(...px);
   const tw = texture.width;
   const th = texture.height;
-  const canvas = document.createElement('canvas');
-  canvas.width = tw;
-  canvas.height = th + room;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(pixels, 0, room, tw, th);
-  const flat = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  /**
+   * L'image plate : la texture posee sous `room` lignes vides, pour que le
+   * warp ait de la place au-dessus. C'etait un `drawImage` dans un canvas
+   * plus haut ; comme la source fait deja tw x th, c'est une copie de lignes
+   * exacte, sans reechantillonnage — et sans DOM.
+   */
+  const flat = new ImageData(tw, th + room);
+  const largeurSrc = pixels.width;
+  const lignes = Math.min(th, pixels.height);
+  const colonnes = Math.min(tw, largeurSrc);
+  for (let y = 0; y < lignes; y++) {
+    const src = y * largeurSrc * 4;
+    const dst = (y + room) * tw * 4;
+    flat.data.set(pixels.data.subarray(src, src + colonnes * 4), dst);
+  }
   const warped = warpToRamp(flat, px, {
     cx: tw / 2, cy: room + th / 2, w: cell.w, h: cell.h, shade: false,
   });

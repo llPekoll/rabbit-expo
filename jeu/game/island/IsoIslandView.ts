@@ -75,7 +75,9 @@ export interface IsoIslandViewOptions {
    * which leaves that veil flat. The game's lids are render textures with no
    * image behind them, hence a hook rather than reading the texture itself.
    */
-  overlayPixels?: (texture: Texture) => CanvasImageSource | null;
+  // ImageData, pas CanvasImageSource : `rampOverlay` compose en pixels et
+  // n'a plus de canvas a qui donner une image (voir TileTextures.ts).
+  overlayPixels?: (texture: Texture) => ImageData | null;
   /** Scatter trees, props and sea rocks. On by default. */
   deco?: boolean;
   /**

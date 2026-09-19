@@ -1,7 +1,19 @@
 import { Assets, Spritesheet, Texture, TextureSource } from 'pixi.js';
-import { loadButtonAssets, loadArcadeFonts, loadCoinAssets } from '@domin8/arcade-kit/pixi';
-import { CARROT_URL } from '@domin8/arcade-kit/game';
-import { ARROW_URLS } from '@domin8/arcade-kit';
+/**
+ * Les deux assets du kit, par leur chemin dans ce repo.
+ *
+ * Le kit les expose par `assetUrl(mod)` : `typeof mod === 'string' ? mod :
+ * mod.src`. Sur le web, `import x from './y.png'` donne une chaine ; avec
+ * Metro c'est un NUMERO de module, donc `mod.src` vaut `undefined` — et le
+ * Resolver de Pixi appelle `split` dessus ("Cannot read property 'split' of
+ * undefined") avant meme d'atteindre notre loader.
+ *
+ * Les fichiers sont copies dans assets/kit/ (tools/sync-assets.mjs) et
+ * inscrits au registre sous '/kit/...', donc on les nomme comme n'importe
+ * quel autre asset du jeu.
+ */
+const CARROT_URL = '/kit/game/carrot.png';
+const ARROW_URLS = { down: '/kit/ui/d8-arrow-down.png' } as const;
 import * as Keys from '../../config/assetKeys';
 import { BURROW_BUILDING_URLS } from '../../game/burrow/buildings';
 import { WIPE_MASK_URLS } from '../../config/wipe';
@@ -14,11 +26,11 @@ const FRAME_SIZE = 32;
 const SHEET_COLS = 8;
 
 const BUNNY_SHEETS = [
-  { key: Keys.BUNNY_BROWN, src: '/assets/bunnies/Bunny Sprite Sheet - Brown.webp' },
-  { key: Keys.BUNNY_GRAY, src: '/assets/bunnies/Bunny Sprite Sheet - Gray.webp' },
-  { key: Keys.BUNNY_ORANGE, src: '/assets/bunnies/Bunny Sprite Sheet - Orange.webp' },
-  { key: Keys.BUNNY_WHITE, src: '/assets/bunnies/Bunny Sprite Sheet - White.webp' },
-  { key: Keys.BUNNY_YELLOW, src: '/assets/bunnies/Bunny Sprite Sheet - Yellowish.webp' },
+  { key: Keys.BUNNY_BROWN, src: '/assets/bunnies/bunny-sprite-sheet-brown.webp' },
+  { key: Keys.BUNNY_GRAY, src: '/assets/bunnies/bunny-sprite-sheet-gray.webp' },
+  { key: Keys.BUNNY_ORANGE, src: '/assets/bunnies/bunny-sprite-sheet-orange.webp' },
+  { key: Keys.BUNNY_WHITE, src: '/assets/bunnies/bunny-sprite-sheet-white.webp' },
+  { key: Keys.BUNNY_YELLOW, src: '/assets/bunnies/bunny-sprite-sheet-yellowish.webp' },
 ];
 
 const IMAGES = [
@@ -365,15 +377,27 @@ async function loadAllAssetsOnce(
   // the kit (resting + pressed twins, under the kit's own aliases) — loaded in
   // parallel so NineButton can bake from them.
   const aliases = allItems.map((i) => i.key);
-  await Promise.all([
-    Assets.load(aliases, (progress) => onProgress?.(progress)),
-    loadButtonAssets(),
-    loadArcadeFonts(),
-    loadCoinAssets(),
-  ]);
+  /**
+   * Les assets du KIT ne sont pas charges en natif.
+   *
+   * `loadButtonAssets`, `loadArcadeFonts` et `loadCoinAssets` declarent leurs
+   * sources par `import x from './y.png'` : sur le web une URL, mais avec
+   * Metro un NUMERO de module. Le Resolver de Pixi fait alors
+   * `src.split('.')` sur `undefined` et tout le chargement echoue
+   * ("alias=d8-arcade-btn-fill src=undefined").
+   *
+   * Ils ne servent qu'au chrome UI (NineButton, les polices bitmap, les
+   * pieces), qui est reecrit en <View> cote natif. Les scenes de jeu n'en
+   * dependent pas : le terrain, les lapins et les fx viennent tous du
+   * registre d'assets.
+   */
+  await Assets.load(aliases, (progress) => onProgress?.(progress));
+
+  console.log('[RR-LOADER] Assets.load termine, parsing des spritesheets...');
 
   // Parse bunny spritesheets into Spritesheet objects
   for (const sheet of BUNNY_SHEETS) {
+    console.log(`[RR-LOADER] parse ${sheet.key}...`);
     const baseTexture = Assets.get<Texture>(sheet.key);
     const frames = buildBunnySpritesheetData(sheet.key);
     const spritesheetData = {
@@ -383,7 +407,9 @@ async function loadAllAssetsOnce(
     const spritesheet = new Spritesheet(baseTexture, spritesheetData);
     await spritesheet.parse();
     bunnySheets.set(sheet.key, spritesheet);
+    console.log(`[RR-LOADER] ${sheet.key} OK`);
   }
+  console.log('[RR-LOADER] lapins parses, explosion...');
 
   // Parse explosion spritesheet
   const explTex = Assets.get<Texture>(EXPLOSION.key);

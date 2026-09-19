@@ -25,11 +25,11 @@ export interface AvatarChoice {
 }
 
 export const AVATARS: AvatarChoice[] = [
-  { key: 'brown', label: 'Brown', src: '/assets/bunnies/Bunny Sprite Sheet - Brown.webp' },
-  { key: 'gray', label: 'Gray', src: '/assets/bunnies/Bunny Sprite Sheet - Gray.webp' },
-  { key: 'orange', label: 'Orange', src: '/assets/bunnies/Bunny Sprite Sheet - Orange.webp' },
-  { key: 'white', label: 'White', src: '/assets/bunnies/Bunny Sprite Sheet - White.webp' },
-  { key: 'yellow', label: 'Yellow', src: '/assets/bunnies/Bunny Sprite Sheet - Yellowish.webp' },
+  { key: 'brown', label: 'Brown', src: '/assets/bunnies/bunny-sprite-sheet-brown.webp' },
+  { key: 'gray', label: 'Gray', src: '/assets/bunnies/bunny-sprite-sheet-gray.webp' },
+  { key: 'orange', label: 'Orange', src: '/assets/bunnies/bunny-sprite-sheet-orange.webp' },
+  { key: 'white', label: 'White', src: '/assets/bunnies/bunny-sprite-sheet-white.webp' },
+  { key: 'yellow', label: 'Yellow', src: '/assets/bunnies/bunny-sprite-sheet-yellowish.webp' },
 ];
 
 /** What a player who never picked one shows up as. */

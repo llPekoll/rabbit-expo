@@ -20,7 +20,7 @@ import { initAssetsRN, installerLoaderRN } from './pixi-rn-assets';
 // Import STATIQUE : un `await import('../jeu/game/island/slopes')` echouait a
 // l'execution ("Unable to resolve module ./rabbit-royale/..."), Metro
 // resolvant les imports dynamiques par un autre chemin que les statiques.
-import { setSlopeRenderer } from './moteur';
+import { initTileTextures, setSlopeRenderer } from './moteur';
 
 export type ContexteJeu = {
   renderer: WebGLRenderer;
@@ -65,6 +65,12 @@ export function PixiSurface({ onPret, onFrame, style }: Props) {
       //    (island/slopes.ts) plutot que par un canvas 2D, qui n'existe pas
       //    ici. A poser avant qu'un terrain ne se construise.
       setSlopeRenderer(renderer as any);
+
+      // 5. Les textures de tuile (losange, contour, remplissage) sont cuites
+      //    UNE fois par renderer. Sur le web c'est BootScene qui s'en charge
+      //    (BootScene.ts:53) — on contourne BootScene, donc on le fait ici.
+      //    Sans quoi le plateau leve "initTileTextures() not called".
+      initTileTextures(renderer as any);
 
       const stage = new Container();
 

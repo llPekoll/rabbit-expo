@@ -241,9 +241,9 @@ const SOUND_MAP: Record<string, { src: string; volume: number; format?: string[]
 const MUSIC_MIX = 0.3;
 
 const MUSIC_MAP: Record<string, { src: string; loop: boolean }> = {
-  [Keys.MUSIC_ISLAND]: { src: '/assets/music/Mossy Keypath Loop.mp3', loop: true },
-  [Keys.MUSIC_GAMEOVER]: { src: '/assets/music/Fallen Knight Chime.mp3', loop: false },
-  [Keys.MUSIC_VICTORY]: { src: '/assets/music/Crown Chest Fanfare.mp3', loop: false },
+  [Keys.MUSIC_ISLAND]: { src: '/assets/music/mossy-keypath-loop.mp3', loop: true },
+  [Keys.MUSIC_GAMEOVER]: { src: '/assets/music/fallen-knight-chime.mp3', loop: false },
+  [Keys.MUSIC_VICTORY]: { src: '/assets/music/crown-chest-fanfare.mp3', loop: false },
 };
 
 export class SoundManager {

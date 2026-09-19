@@ -44,6 +44,7 @@ export { BurrowScene } from '../jeu/game/scenes/BurrowScene';
 export { IslandScene } from '../jeu/game/scenes/IslandScene';
 export { loadAllAssets } from '../jeu/game/services/AssetLoader';
 export { setSlopeRenderer } from '../jeu/game/island/slopes';
+export { initTileTextures } from '../jeu/game/services/TileTextures';
 export {
   PORTRAIT_W, PORTRAIT_H, landscapeCanvas,
 } from '../jeu/game/Application';

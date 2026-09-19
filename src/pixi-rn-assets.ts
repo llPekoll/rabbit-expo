@@ -108,19 +108,39 @@ const loaderRN: LoaderParser = {
     // URL en natif. On le prend en charge plutot que de laisser un parser
     // de Pixi faire `startsWith` dessus.
     if (url === undefined || url === null) return true;
-    return typeof url === 'string' && moduleDe(url) !== null;
+    /**
+     * TOUT chemin d'asset est pour nous, meme s'il n'est pas au registre.
+     *
+     * AVEC OU SANS slash initial : le Resolver de Pixi le retire
+     * ("/assets/x.png" -> "assets/x.png", mur 12). Une version de ce test
+     * qui exigeait le slash declinait tout, et Pixi passait chaque asset a
+     * son `loadTextures` — `new Image()`, inexistant en RN — dont la
+     * promesse ne se resout JAMAIS : zero asset charge, aucune erreur.
+     *
+     * En prenant tout, `load` peut au moins NOMMER un asset manquant.
+     */
+    return typeof url === 'string' && /^\/?(assets|kit)\//.test(url);
   },
 
   async load(url: string | number) {
     // Un nombre EST deja un module Metro (cf. `test`) : rien a chercher.
     if (url === undefined || url === null) {
-      // Rien a charger : on rend une texture vide plutot que de faire
-      // echouer tout le chargement pour un asset decoratif du kit.
-      console.log('[RR-ASSETS] source indefinie (asset du kit) -> texture vide');
-      return Texture.EMPTY;
+      // Une source absente est un BUG de declaration, pas un cas normal :
+      // une texture vide donnerait un sprite invisible et masquerait la
+      // cause. On echoue en nommant le probleme.
+      throw new Error(
+        '[RR-ASSETS] source indefinie : un asset est declare sans chemin '
+        + '(souvent un import d\'image du kit, que Metro rend en numero de '
+        + 'module plutot qu\'en URL).',
+      );
     }
     const mod = typeof url === 'number' ? url : moduleDe(url);
-    if (mod === null) throw new Error(`asset absent du registre natif : ${url}`);
+    if (mod === null) {
+      throw new Error(
+        `[RR-ASSETS] asset absent du registre natif : "${url}". `
+        + 'Lance `bun run assets` si le fichier existe dans le jeu.',
+      );
+    }
     try {
       const t = await textureDepuisModule(mod);
       console.log(`[RR-ASSETS] OK ${url} -> ${t.width}x${t.height}`);
@@ -161,6 +181,63 @@ function protegerParsersDuResolver() {
   }
 }
 
+/**
+ * Signale les assets declares SANS chemin, avant que Pixi ne s'y casse.
+ *
+ * `Resolver.add` appelle `getUrlExtension(src)` -> `src.split('.')` sur
+ * chaque source. Une source `undefined` y leve "Cannot read property 'split'
+ * of undefined", et l'erreur ne dit PAS lequel des ~250 assets est en cause.
+ * On enveloppe donc `Assets.add` pour nommer le coupable.
+ */
+function tracerAssetsSansChemin() {
+  const origine = Assets.add.bind(Assets);
+  (Assets as any).add = (...args: any[]) => {
+    const liste = Array.isArray(args[0]) ? args[0] : [args[0]];
+    for (const a of liste) {
+      const src = a?.src;
+      const manquant = src === undefined || src === null
+        || (Array.isArray(src) && src.some((s: unknown) => s === undefined || s === null));
+      if (manquant) {
+        console.log(`[RR-ASSETS] SANS CHEMIN : alias="${a?.alias}" src=${JSON.stringify(src)}`);
+      }
+    }
+    return origine(...(args as [any]));
+  };
+}
+
+/**
+ * `fetch('/assets/x.json')` sert le JSON du registre.
+ *
+ * Le moteur charge ses atlas Aseprite (oiseaux, touffes d'herbe, loot-box,
+ * electrocution) par `fetch` d'une URL RELATIVE — qui sur le web tape le
+ * serveur, et qui en RN ne designe rien. Or ces fichiers sont au registre,
+ * et Metro rend un `.json` deja PARSE (pas un numero de module). On sert
+ * donc ces requetes-la depuis le registre, et on laisse passer tout le reste
+ * (l'API, ws.rabbit.rip) au vrai fetch.
+ */
+function installerFetchAssets() {
+  const g = globalThis as any;
+  const vrai = g.fetch?.bind(g);
+  if (!vrai || g.__rrFetchAssets) return;
+  g.__rrFetchAssets = true;
+  g.fetch = (entree: any, init?: any) => {
+    const url = typeof entree === 'string' ? entree : entree?.url;
+    if (typeof url === 'string' && /^\/?(assets|kit)\/.*\.json(\?.*)?$/.test(url)) {
+      const data = moduleDe(url) as unknown;
+      if (data === null) {
+        return Promise.reject(new Error(`[RR-ASSETS] atlas absent du registre : "${url}"`));
+      }
+      // Un objet deja parse : on l'emballe comme une Response.
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: async () => data,
+        text: async () => JSON.stringify(data),
+      } as Response);
+    }
+    return vrai(entree, init);
+  };
+}
+
 export function installerLoaderRN() {
   if (installe) return;
   /**
@@ -174,6 +251,8 @@ export function installerLoaderRN() {
    */
   Assets.loader.parsers.unshift(loaderRN as any);
   protegerParsersDuResolver();
+  tracerAssetsSansChemin();
+  installerFetchAssets();
   installe = true;
   const noms = Assets.loader.parsers.map((p: any) => p.name ?? p.id).join(', ');
   console.log(`[RR-ASSETS] parsers installes: ${noms}`);

@@ -80,11 +80,16 @@ ${lignes}
 export function moduleDe(url: string): number | null {
   if (typeof url !== 'string' || url.length === 0) return null;
 
-  // Ne garder que la partie a partir de "/assets/", sans query ni ancre.
+  // Ne garder que la partie a partir de "/assets/" ou "/kit/", sans query
+  // ni ancre. Les deux prefixes : les assets du jeu et ceux du kit.
   let chemin = url.split('?')[0].split('#')[0];
-  const i = chemin.indexOf('assets/');
-  if (i === -1) return null;
-  chemin = '/' + chemin.slice(i);
+  let i = chemin.indexOf('assets/');
+  let prefixe = '/';
+  if (i === -1) {
+    i = chemin.indexOf('kit/');
+    if (i === -1) return null;
+  }
+  chemin = prefixe + chemin.slice(i);
 
   const png = chemin.replace(/\\.webp$/i, '.png');
   return ASSETS[chemin] ?? ASSETS[png] ?? null;

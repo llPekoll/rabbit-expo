@@ -13,7 +13,17 @@ let outlineTex: Texture | null = null;
  * these as pixels — warping a lid onto a ramp (`slopes.ts`) — runs where
  * there is no renderer to ask. Keyed by texture, so a stale one answers null.
  */
-const pixels = new Map<Texture, HTMLCanvasElement>();
+/**
+ * Les pixels derriere chaque cuisson, en ImageData.
+ *
+ * C'etait un canvas obtenu par `renderer.extract.canvas()`, et `rampOverlay`
+ * le redessinait dans un autre canvas pour lire ses pixels — deux allers-
+ * retours par un DOM qui n'existe pas en React Native ("undefined is not a
+ * function" dans generateCanvas, faute de createImageData). Pixi sait lire
+ * les pixels directement : `renderer.texture.getPixels` est un readPixels
+ * GL. On garde donc l'ImageData, que `rampOverlay` compose sans canvas.
+ */
+const pixels = new Map<Texture, ImageData>();
 /**
  * The renderer the cached textures were baked BY.
  *
@@ -102,12 +112,18 @@ export function initTileTextures(renderer: Renderer): void {
   outlineTex.source.scaleMode = 'nearest';
   outlineG.destroy();
 
-  pixels.set(fillTex, renderer.extract.canvas(fillTex) as HTMLCanvasElement);
-  pixels.set(outlineTex, renderer.extract.canvas(outlineTex) as HTMLCanvasElement);
+  pixels.set(fillTex, lirePixels(renderer, fillTex));
+  pixels.set(outlineTex, lirePixels(renderer, outlineTex));
+}
+
+/** Une texture cuite, lue en ImageData par le renderer (readPixels GL). */
+function lirePixels(renderer: Renderer, texture: Texture): ImageData {
+  const { pixels: data, width, height } = renderer.texture.getPixels(texture);
+  return new ImageData(new Uint8ClampedArray(data), width, height);
 }
 
 /** The pixels behind one of the two bakes, or null for any other texture. */
-export function getDiamondPixels(texture: Texture): HTMLCanvasElement | null {
+export function getDiamondPixels(texture: Texture): ImageData | null {
   return pixels.get(texture) ?? null;
 }
 

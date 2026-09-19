@@ -104,6 +104,40 @@ export function installerDomMoteur() {
   // Hors web, `window` n'existe pas : on le pose entier.
   g.window = faux;
 
+  /**
+   * `ImageData`, pour les rampes.
+   *
+   * `island/slopes.ts` manipule ses pixels en `ImageData` — `readCell` en
+   * construit un a partir de `renderer.texture.getPixels`, et `bevelCell`,
+   * `ensureBand`, `warpToRamp` en creent d'autres par
+   * `new ImageData(new Uint8ClampedArray(...), w, h)`. En React Native la
+   * classe n'existe pas ("Property 'ImageData' doesn't exist", leve dans
+   * readCell a la premiere rampe du terrain).
+   *
+   * Le moteur ne lit que `data`, `width` et `height` : trois champs, dans
+   * les deux formes du constructeur de la spec.
+   */
+  if (!g.ImageData) {
+    g.ImageData = class ImageData {
+      readonly data: Uint8ClampedArray;
+      readonly width: number;
+      readonly height: number;
+      constructor(a: Uint8ClampedArray | number, b: number, c?: number) {
+        if (typeof a === 'number') {
+          // new ImageData(width, height) : des pixels transparents.
+          this.width = a;
+          this.height = b;
+          this.data = new Uint8ClampedArray(a * b * 4);
+        } else {
+          // new ImageData(data, width, height?) : la hauteur se deduit.
+          this.data = a;
+          this.width = b;
+          this.height = c ?? a.length / 4 / b;
+        }
+      }
+    };
+  }
+
   // Les dimensions changent a la rotation. Le moteur ecoute 'resize' pour
   // resoudre a nouveau ses cadrages (BurrowScene.onResize), donc on relaie.
   Dimensions.addEventListener('change', ({ window: w }) => {

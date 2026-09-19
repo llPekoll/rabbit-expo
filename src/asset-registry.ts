@@ -17,11 +17,11 @@ export const ASSETS: Record<string, number> = {
   "/assets/buildings/house-3.png": require("../assets/game/buildings/house-3.png"),
   "/assets/buildings/monastery.png": require("../assets/game/buildings/monastery.png"),
   "/assets/buildings/tower.png": require("../assets/game/buildings/tower.png"),
-  "/assets/bunnies/Bunny Sprite Sheet - Brown.png": require("../assets/game/bunnies/Bunny Sprite Sheet - Brown.png"),
-  "/assets/bunnies/Bunny Sprite Sheet - Gray.png": require("../assets/game/bunnies/Bunny Sprite Sheet - Gray.png"),
-  "/assets/bunnies/Bunny Sprite Sheet - Orange.png": require("../assets/game/bunnies/Bunny Sprite Sheet - Orange.png"),
-  "/assets/bunnies/Bunny Sprite Sheet - White.png": require("../assets/game/bunnies/Bunny Sprite Sheet - White.png"),
-  "/assets/bunnies/Bunny Sprite Sheet - Yellowish.png": require("../assets/game/bunnies/Bunny Sprite Sheet - Yellowish.png"),
+  "/assets/bunnies/bunny-sprite-sheet-brown.png": require("../assets/game/bunnies/bunny-sprite-sheet-brown.png"),
+  "/assets/bunnies/bunny-sprite-sheet-gray.png": require("../assets/game/bunnies/bunny-sprite-sheet-gray.png"),
+  "/assets/bunnies/bunny-sprite-sheet-orange.png": require("../assets/game/bunnies/bunny-sprite-sheet-orange.png"),
+  "/assets/bunnies/bunny-sprite-sheet-white.png": require("../assets/game/bunnies/bunny-sprite-sheet-white.png"),
+  "/assets/bunnies/bunny-sprite-sheet-yellowish.png": require("../assets/game/bunnies/bunny-sprite-sheet-yellowish.png"),
   "/assets/bunnies/elecrictiy.json": require("../assets/game/bunnies/elecrictiy.json"),
   "/assets/bunnies/elecrictiy.png": require("../assets/game/bunnies/elecrictiy.png"),
   "/assets/bunnies/electrocuted.json": require("../assets/game/bunnies/electrocuted.json"),
@@ -277,11 +277,16 @@ export const ASSETS: Record<string, number> = {
 export function moduleDe(url: string): number | null {
   if (typeof url !== 'string' || url.length === 0) return null;
 
-  // Ne garder que la partie a partir de "/assets/", sans query ni ancre.
+  // Ne garder que la partie a partir de "/assets/" ou "/kit/", sans query
+  // ni ancre. Les deux prefixes : les assets du jeu et ceux du kit.
   let chemin = url.split('?')[0].split('#')[0];
-  const i = chemin.indexOf('assets/');
-  if (i === -1) return null;
-  chemin = '/' + chemin.slice(i);
+  let i = chemin.indexOf('assets/');
+  let prefixe = '/';
+  if (i === -1) {
+    i = chemin.indexOf('kit/');
+    if (i === -1) return null;
+  }
+  chemin = prefixe + chemin.slice(i);
 
   const png = chemin.replace(/\.webp$/i, '.png');
   return ASSETS[chemin] ?? ASSETS[png] ?? null;
