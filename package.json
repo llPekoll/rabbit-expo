@@ -10,6 +10,7 @@
     "assets": "bun run tools/sync-assets.mjs"
   },
   "dependencies": {
+    "@domin8/arcade-kit": "github:Paul-Ollivier/arcade-kit#v2.2.1",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@solana-mobile/mobile-wallet-adapter-protocol": "^2.3.0",
     "@solana-mobile/mobile-wallet-adapter-protocol-web3js": "^2.3.0",

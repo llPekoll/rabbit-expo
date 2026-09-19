@@ -11,11 +11,11 @@
  * i18n/locales.ts). L'anglais garde donc la face bitmap ; les trois autres
  * tombent sur la police systeme. `pixelFace` de `LOCALE_META` dit laquelle.
  */
-import { en } from '../jeu/src/i18n/dict/en';
-import { fr } from '../jeu/src/i18n/dict/fr';
-import { zh } from '../jeu/src/i18n/dict/zh';
-import { ptBR } from '../jeu/src/i18n/dict/pt-BR';
-import { LOCALES, DEFAULT_LOCALE, type Locale } from '../jeu/src/i18n/locales';
+import { en } from '../jeu/i18n/dict/en';
+import { fr } from '../jeu/i18n/dict/fr';
+import { zh } from '../jeu/i18n/dict/zh';
+import { ptBR } from '../jeu/i18n/dict/pt-BR';
+import { LOCALES, DEFAULT_LOCALE, type Locale } from '../jeu/i18n/locales';
 
 export type { Locale };
 export { LOCALES, DEFAULT_LOCALE };

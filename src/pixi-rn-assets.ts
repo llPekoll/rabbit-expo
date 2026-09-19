@@ -104,11 +104,21 @@ const loaderRN: LoaderParser = {
      * On prend donc aussi les nombres : Metro sait les resoudre en asset.
      */
     if (typeof url === 'number') return true;
+    // `undefined` : un asset du kit, dont `assetUrl` n'a pas su faire une
+    // URL en natif. On le prend en charge plutot que de laisser un parser
+    // de Pixi faire `startsWith` dessus.
+    if (url === undefined || url === null) return true;
     return typeof url === 'string' && moduleDe(url) !== null;
   },
 
   async load(url: string | number) {
     // Un nombre EST deja un module Metro (cf. `test`) : rien a chercher.
+    if (url === undefined || url === null) {
+      // Rien a charger : on rend une texture vide plutot que de faire
+      // echouer tout le chargement pour un asset decoratif du kit.
+      console.log('[RR-ASSETS] source indefinie (asset du kit) -> texture vide');
+      return Texture.EMPTY;
+    }
     const mod = typeof url === 'number' ? url : moduleDe(url);
     if (mod === null) throw new Error(`asset absent du registre natif : ${url}`);
     try {

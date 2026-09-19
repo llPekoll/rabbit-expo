@@ -4,7 +4,7 @@
  * POURQUOI CE FICHIER. Les imports ES sont HISSES : dans un module qui fait
  *
  *     import { installerDomMoteur } from './dom-moteur';
- *     import { BurrowScene } from '../jeu/src/game/scenes/BurrowScene';
+ *     import { BurrowScene } from '../jeu/game/scenes/BurrowScene';
  *     installerDomMoteur();
  *
  * ...BurrowScene est evalue AVANT l'appel, et certains modules du moteur
@@ -14,7 +14,7 @@
  * elle.
  *
  * Les imports sont STATIQUES parce que Metro ne resout pas un
- * `import('../jeu/src/...')` dynamique : il garde le chemin tel quel dans le
+ * `import('../jeu/...')` dynamique : il garde le chemin tel quel dans le
  * bundle et le runtime le resout depuis la racine du projet, perdant le `..`
  * — d'ou "Unable to resolve module ./rabbit-royale/src/...".
  */
@@ -22,10 +22,28 @@ import { installerDomMoteur } from './dom-moteur';
 
 installerDomMoteur();
 
-export { BurrowScene } from '../jeu/src/game/scenes/BurrowScene';
-export { IslandScene } from '../jeu/src/game/scenes/IslandScene';
-export { loadAllAssets } from '../jeu/src/game/services/AssetLoader';
-export { setSlopeRenderer } from '../jeu/src/game/island/slopes';
+/**
+ * L'arcade-kit rend `undefined` pour ses propres assets.
+ *
+ * Il les expose par `assetUrl(mod)` : `typeof mod === 'string' ? mod :
+ * mod.src` (asset-url.ts). Sur le web, `import x from './y.png'` donne une
+ * chaine ; avec Metro c'est un NUMERO de module, donc `mod.src` vaut
+ * `undefined`.
+ *
+ * Le jeu charge alors `{ src: undefined }`, et le Resolver de Pixi appelle
+ * `url.startsWith()` dessus : "Cannot read property 'startsWith' of
+ * undefined", avant meme notre loader.
+ *
+ * On ne peut PAS corriger `assetUrl` apres coup : `CARROT_URL =
+ * assetUrl(carrotPng)` est evalue au chargement du module du kit. C'est donc
+ * le LOADER natif qui rattrape `undefined` (voir pixi-rn-assets.ts), en
+ * servant l'asset equivalent copie dans assets/kit/.
+ */
+
+export { BurrowScene } from '../jeu/game/scenes/BurrowScene';
+export { IslandScene } from '../jeu/game/scenes/IslandScene';
+export { loadAllAssets } from '../jeu/game/services/AssetLoader';
+export { setSlopeRenderer } from '../jeu/game/island/slopes';
 export {
   PORTRAIT_W, PORTRAIT_H, landscapeCanvas,
-} from '../jeu/src/game/Application';
+} from '../jeu/game/Application';

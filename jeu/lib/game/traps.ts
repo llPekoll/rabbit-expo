@@ -1,0 +1,232 @@
+/**
+ * The trap economy: how many you have, and what one costs.
+ *
+ * The free daily allowance is DERIVED from a timestamp, never granted by a job.
+ * Same reasoning as energy and burrow HP: a per-player cron is O(players) every
+ * day forever, and it is the first thing to fall over. A subtraction is O(1) and
+ * only runs when someone actually opens their burrow.
+ *
+ * "3 free per day" is therefore a rolling allowance, not a midnight reset — you
+ * are never punished for playing at the wrong hour, and there is no stampede.
+ */
+import { TRAPS } from '../../tuning/tuning';
+import { isTrappable } from '../../game/burrow/board';
+
+export interface TrapRow {
+  /** Traps bought or looted — these never expire. */
+  trapsOwned: number;
+  /** When the free allowance was last drawn down. */
+  trapsClaimedAt: Date;
+}
+
+/**
+ * Free traps available right now.
+ *
+ * The allowance refills linearly over REFILL_MS: wait a third of a day and one
+ * of the three comes back. Capped at FREE_PER_DAY, so leaving for a week banks
+ * three, not twenty-one.
+ */
+export function freeTraps(row: TrapRow, now = Date.now()): number {
+  const elapsed = Math.max(0, now - row.trapsClaimedAt.getTime());
+  const perTrap = TRAPS.REFILL_MS / TRAPS.FREE_PER_DAY;
+  return Math.min(TRAPS.FREE_PER_DAY, Math.floor(elapsed / perTrap));
+}
+
+/** Everything a player could place right now, free allowance included. */
+export function availableTraps(row: TrapRow, now = Date.now()): number {
+  return Math.min(TRAPS.MAX_HELD, row.trapsOwned + freeTraps(row, now));
+}
+
+/**
+ * Spend one trap, preferring the FREE allowance over bought stock.
+ *
+ * Free-first because bought traps cost carrots and an allowance that expires
+ * unused is worth nothing — spending the perishable resource first is what a
+ * player would do by hand, so the game should not make them do it by hand.
+ *
+ * Returns the fields to write, or null when there is nothing to spend.
+ */
+export function spendTrap(
+  row: TrapRow,
+  now = Date.now(),
+): { trapsOwned: number; trapsClaimedAt: Date } | null {
+  const free = freeTraps(row, now);
+  if (free > 0) {
+    // Push the claim stamp forward by ONE trap's worth rather than resetting it
+    // to now: resetting would throw away the progress already made towards the
+    // other two, which is the bug this shape exists to avoid.
+    const perTrap = TRAPS.REFILL_MS / TRAPS.FREE_PER_DAY;
+    return {
+      trapsOwned: row.trapsOwned,
+      trapsClaimedAt: new Date(row.trapsClaimedAt.getTime() + perTrap),
+    };
+  }
+  if (row.trapsOwned > 0) {
+    return { trapsOwned: row.trapsOwned - 1, trapsClaimedAt: row.trapsClaimedAt };
+  }
+  return null;
+}
+
+/**
+ * Give a trap back: the inverse of `spendTrap`, for one lifted off the board.
+ *
+ * It comes back as OWNED stock rather than as free allowance, whichever kind
+ * paid for it. Rewinding `trapsClaimedAt` would be the exact inverse, and it
+ * is the wrong one: the allowance refills on a clock, so a rewind hands back a
+ * trap AND restarts the timer that was already running towards the next one —
+ * lift and re-place on a loop and the burrow mines itself for free. Owned
+ * stock has no clock, so a trap returned this way is worth exactly the one
+ * that was spent.
+ *
+ * Capped at MAX_HELD so a defender who lifts a full board cannot end up
+ * holding more than the bag allows.
+ */
+export function refundTrap(row: TrapRow, now = Date.now()): { trapsOwned: number } {
+  return refundTraps(row, 1, now);
+}
+
+/**
+ * Give back `count` traps at once — clearing the whole board in one gesture.
+ *
+ * The same rule as `refundTrap`, applied N times rather than looped by the
+ * caller: stock returned, never allowance rewound, and the same MAX_HELD cap
+ * measured against the free allowance standing right now.
+ *
+ * It has to be one call rather than N, because the cap is not distributive: a
+ * defender lifting eight traps into a bag that can hold twelve, with three free
+ * already waiting, ends at nine — not at eight separate saturating adds, which
+ * is the same answer here but stops being so the moment either limit moves.
+ * One function, one place to be right.
+ */
+export function refundTraps(
+  row: TrapRow,
+  count: number,
+  now = Date.now(),
+): { trapsOwned: number } {
+  const free = freeTraps(row, now);
+  const room = Math.max(0, TRAPS.MAX_HELD - free);
+  return { trapsOwned: Math.min(room, row.trapsOwned + Math.max(0, count)) };
+}
+
+/** Why a trap cannot be placed, or null when it can. */
+export function placementBlocker(
+  row: TrapRow,
+  placedCount: number,
+  tileIsTrappable: boolean,
+  tileAlreadyTrapped: boolean,
+  now = Date.now(),
+  /**
+   * The tile is walkable but on the DOORSTEP (`TRAPS.DOORSTEP` steps in from
+   * the entrance). Named apart from "not trappable" because it is open ground
+   * the player can see and walk, and "nothing to mine there" would be a lie
+   * about it — the refusal has to say WHY.
+   */
+  tileIsDoorstep = false,
+): string | null {
+  if (tileIsDoorstep) return 'tile_doorstep';
+  if (!tileIsTrappable) return 'tile_not_trappable';
+  if (tileAlreadyTrapped) return 'tile_already_trapped';
+  if (placedCount >= TRAPS.MAX_PLACED) return 'board_full';
+  if (availableTraps(row, now) <= 0) return 'no_traps';
+  return null;
+}
+
+/** Carrots for one extra trap. Flat: a scaling price would let a rich player
+ *  buy an impregnable burrow, which the balance explicitly rules out. */
+export const trapCost = () => TRAPS.CARROT_COST;
+
+/**
+ * A trap as the floor stores it: its tile, and when it was last sprung.
+ *
+ * Only the two fields the arming clock reads, so the pure helpers below can be
+ * tested without a database row.
+ */
+export interface PlacedTrap {
+  tile: number;
+  sprungAt?: Date | null;
+}
+
+/**
+ * When a sprung trap comes back, given its rank among the traps rearming.
+ *
+ * `rank` is 0 for the one that has been down longest, 1 for the next, and so
+ * on — the STAGGER is what stops a board snapping from bare to full on a
+ * single tick. Ranking by `sprungAt` rather than by tile means the trap sprung
+ * first is the trap restored first, which is the only order an owner watching
+ * their burrow could predict.
+ */
+export function rearmAt(sprungAt: Date, rank = 0): number {
+  return sprungAt.getTime() + TRAPS.REARM_MS + rank * TRAPS.REARM_STAGGER_MS;
+}
+
+/**
+ * Is this trap standing right now?
+ *
+ * Never sprung → armed. Otherwise it is armed again once its rearm instant has
+ * passed. `rank` comes from `armedTraps`, which is the only caller that can
+ * know it — a trap does not know its own place in the queue.
+ */
+export function isArmed(trap: PlacedTrap, now = Date.now(), rank = 0): boolean {
+  if (!trap.sprungAt) return true;
+  return rearmAt(trap.sprungAt, rank) <= now;
+}
+
+/**
+ * The traps actually defending a burrow right now.
+ *
+ * THE function the rest of the game asks. The raider's clue numbers and the
+ * server's "did you step on one" check both go through it, so the board a
+ * raider reads and the board the server settles against are the same board by
+ * construction — the bug this shape exists to make impossible.
+ *
+ * The rearm queue is ranked by `sprungAt` here, because the stagger is a
+ * property of the SET of down traps rather than of any one of them: a trap
+ * sprung an hour ago is third in line or first depending only on what else is
+ * down beside it.
+ */
+export function armedTraps<T extends PlacedTrap>(traps: readonly T[], now = Date.now()): T[] {
+  const down = traps
+    .filter((t) => t.sprungAt)
+    .sort((a, b) => a.sprungAt!.getTime() - b.sprungAt!.getTime());
+  const rank = new Map(down.map((t, i) => [t, i] as const));
+  return traps.filter((t) => isArmed(t, now, rank.get(t) ?? 0));
+}
+
+/**
+ * The traps a RAID meets: armed, AND on ground a bomb may still sit under.
+ *
+ * The second filter is for rows the rules moved out from under. A bomb buried
+ * on the entrance before the doorstep existed (`TRAPS.DOORSTEP`) is still a
+ * row until its owner next opens their burrow (`api/traps` lifts it then, and
+ * hands it back), and a defender asleep through the deploy must not keep a
+ * defence nobody may build any more. Clues and springing both go through
+ * here, for the same reason they both go through `armedTraps`: one function,
+ * one board.
+ */
+export function standingTraps<T extends PlacedTrap>(
+  seed: string,
+  traps: readonly T[],
+  now = Date.now(),
+): T[] {
+  return armedTraps(traps, now).filter((t) => isTrappable(seed, t.tile));
+}
+
+/**
+ * Traps still rearming, soonest first — what the owner's burrow screen shows.
+ *
+ * A burrow that simply reported "3 traps" while five sat invisible under a
+ * timer would read as loss rather than as recovery, which is the whole reason
+ * the clock is gradual in the first place.
+ */
+export function rearmingTraps<T extends PlacedTrap>(
+  traps: readonly T[],
+  now = Date.now(),
+): { trap: T; readyAt: number }[] {
+  const armed = new Set(armedTraps(traps, now));
+  const down = traps
+    .filter((t) => t.sprungAt)
+    .sort((a, b) => a.sprungAt!.getTime() - b.sprungAt!.getTime());
+  return down
+    .map((trap, rank) => ({ trap, readyAt: rearmAt(trap.sprungAt!, rank) }))
+    .filter(({ trap }) => !armed.has(trap));
+}

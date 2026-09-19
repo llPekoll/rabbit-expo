@@ -4,10 +4,7 @@
     "strict": true,
     "paths": {
       "@/*": [
-        "./jeu/src/*"
-      ],
-      "@config/*": [
-        "./jeu/config/*"
+        "./jeu/*"
       ]
     },
     "skipLibCheck": true
@@ -20,11 +17,9 @@
   ],
   "exclude": [
     "node_modules",
-    "jeu/src/app",
-    "jeu/src/components",
-    "jeu/src/stories",
-    "jeu/src/lib/auth",
-    "jeu/src/lib/db",
-    "jeu/src/lib/pay"
+    "jeu/components",
+    "jeu/lib/game/grant.ts",
+    "jeu/lib/game/raid-events.ts",
+    "jeu/lib/leaderboard.ts"
   ]
 }

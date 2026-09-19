@@ -17,7 +17,7 @@ import { Container, DOMAdapter, WebGLRenderer } from 'pixi.js';
 import { ReactNativeAdapter, setSharedGL } from './pixi-rn-adapter';
 import './pixi-rn-init';
 import { initAssetsRN, installerLoaderRN } from './pixi-rn-assets';
-// Import STATIQUE : un `await import('../jeu/src/game/island/slopes')` echouait a
+// Import STATIQUE : un `await import('../jeu/game/island/slopes')` echouait a
 // l'execution ("Unable to resolve module ./rabbit-royale/..."), Metro
 // resolvant les imports dynamiques par un autre chemin que les statiques.
 import { setSlopeRenderer } from './moteur';

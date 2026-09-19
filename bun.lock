@@ -18,6 +18,7 @@
         "expo-localization": "^57.0.2",
         "expo-router": "^57.0.22",
         "expo-secure-store": "^57.0.4",
+        "@domin8/arcade-kit": "github:Paul-Ollivier/arcade-kit#v2.2.1",
         "gsap": "^3.15.0",
         "howler": "^2.2.4",
         "js-base64": "^3.9.4",
@@ -181,6 +182,8 @@
     "@babel/traverse": ["@babel/traverse@7.29.8", "", { "dependencies": { "@babel/code-frame": "^7.29.7", "@babel/generator": "^7.29.8", "@babel/helper-globals": "^7.29.7", "@babel/parser": "^7.29.8", "@babel/template": "^7.29.7", "@babel/types": "^7.29.8", "debug": "^4.3.1" } }, "sha512-I5z7H3bf/41ktsNVLtpN0wAa336HkqIHQ5BuPLEhTkt1jVSyZpeNKIzTgEWmlxjdg81R0IgUCcaE+Ok3NvrfZg=="],
 
     "@babel/types": ["@babel/types@7.29.8", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg=="],
+
+    "@domin8/arcade-kit": ["@domin8/arcade-kit@github:Paul-Ollivier/arcade-kit#4e02315", { "peerDependencies": { "pixi.js": ">=8", "react": ">=18", "react-dom": ">=18" }, "optionalPeers": ["pixi.js"] }, "Paul-Ollivier-arcade-kit-4e02315", "sha512-oQyIiXx521xAkPCTYhxjAo43GdV56kXBJ4Kp4bsI2zD/eZlH0iVDMuukINVd68e6rsLTrtQQgB+0MOJDBY/4MA=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 

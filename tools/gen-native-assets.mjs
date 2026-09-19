@@ -23,7 +23,7 @@ import { join, extname, relative } from 'node:path';
  * Le MOTEUR, lui, n'est pas copie : voir metro.config.js. 42 000 lignes en
  * double divergeraient au premier correctif.
  */
-const RACINE = 'assets/game';
+const RACINES = ['assets/game', 'assets/kit'];
 const SORTIE = 'src/asset-registry.ts';
 
 async function* parcourir(dir) {
@@ -35,13 +35,16 @@ async function* parcourir(dir) {
 }
 
 const entrees = [];
-for await (const f of parcourir(RACINE)) {
+for (const RACINE of RACINES) for await (const f of parcourir(RACINE)) {
   const ext = extname(f).toLowerCase();
   // .png : les textures. .json : les atlas Aseprite, que Pixi lit tels quels.
   if (ext !== '.png' && ext !== '.json') continue;
   // L'URL telle que le jeu l'ecrit ('/assets/...'), et le chemin depuis
   // src/asset-registry.ts.
-  const url = '/assets/' + relative(RACINE, f);
+  // Les assets du jeu gardent l'URL qu'il ecrit ('/assets/...') ; ceux du
+  // kit prennent '/kit/...', leur seul role etant d'etre trouvables.
+  const prefixe = RACINE.endsWith('kit') ? '/kit/' : '/assets/';
+  const url = prefixe + relative(RACINE, f);
   const chemin = '../' + f;
   entrees.push([url, chemin]);
 }
