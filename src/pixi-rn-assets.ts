@@ -92,15 +92,24 @@ const loaderRN: LoaderParser = {
   name: 'rabbit-royale-native',
   extension: { type: 'load-parser' as any, priority: 10 },
 
-  test(url: string) {
-    const ok = typeof url === 'string' && moduleDe(url) !== null;
-    console.log(`[RR-ASSETS] test("${url}") -> ${ok}`);
-    return ok;
+  test(url: unknown) {
+    /**
+     * `url` n'est pas toujours une chaine.
+     *
+     * L'arcade-kit exporte ses assets par `import x from './y.png'` : sur le
+     * web c'est une URL, mais Metro en fait un NUMERO de module. Ces
+     * sources-la arrivent ici en nombre, et les parsers de Pixi appellent
+     * `startsWith` dessus ("Cannot read property 'startsWith' of undefined").
+     *
+     * On prend donc aussi les nombres : Metro sait les resoudre en asset.
+     */
+    if (typeof url === 'number') return true;
+    return typeof url === 'string' && moduleDe(url) !== null;
   },
 
-  async load(url: string) {
-    console.log(`[RR-ASSETS] load("${url}")`);
-    const mod = moduleDe(url);
+  async load(url: string | number) {
+    // Un nombre EST deja un module Metro (cf. `test`) : rien a chercher.
+    const mod = typeof url === 'number' ? url : moduleDe(url);
     if (mod === null) throw new Error(`asset absent du registre natif : ${url}`);
     try {
       const t = await textureDepuisModule(mod);
@@ -117,6 +126,31 @@ const loaderRN: LoaderParser = {
 let installe = false;
 
 /** A appeler une fois, avant le premier Assets.load du jeu. */
+/**
+ * Protege les parsers d'URL du Resolver contre les sources non-chaines.
+ *
+ * `Resolver.add` resout chaque source AVANT le loader, par
+ * `this._parsers.find((p) => p.test(url))` (Resolver.mjs:351). Ces parsers
+ * font `url.startsWith(...)` sans garde — or l'arcade-kit exporte ses assets
+ * par `import x from './y.png'`, ce que Metro transforme en NUMERO de module.
+ * D'ou "Cannot read property 'startsWith' of undefined" avant meme que notre
+ * loader ne soit consulte.
+ *
+ * On enveloppe donc leur `test` pour qu'il rende false sur tout ce qui n'est
+ * pas une chaine : la source passe alors telle quelle jusqu'au loader, qui
+ * sait traiter les nombres.
+ */
+function protegerParsersDuResolver() {
+  const parsers = (Assets.resolver as any)._parsers as any[] | undefined;
+  if (!Array.isArray(parsers)) return;
+  for (const p of parsers) {
+    if (typeof p?.test !== 'function' || p.__rnProtege) continue;
+    const origine = p.test.bind(p);
+    p.test = (url: unknown) => (typeof url === 'string' ? origine(url) : false);
+    p.__rnProtege = true;
+  }
+}
+
 export function installerLoaderRN() {
   if (installe) return;
   /**
@@ -129,6 +163,7 @@ export function installerLoaderRN() {
    * avant lui.
    */
   Assets.loader.parsers.unshift(loaderRN as any);
+  protegerParsersDuResolver();
   installe = true;
   const noms = Assets.loader.parsers.map((p: any) => p.name ?? p.id).join(', ');
   console.log(`[RR-ASSETS] parsers installes: ${noms}`);

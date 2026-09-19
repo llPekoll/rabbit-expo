@@ -17,3 +17,6 @@ expo-env.d.ts
 
 # Systeme
 .DS_Store
+
+# Liens vers le repo du jeu, crees par tools/link-jeu.sh
+/jeu/

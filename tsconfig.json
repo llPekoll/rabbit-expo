@@ -4,10 +4,10 @@
     "strict": true,
     "paths": {
       "@/*": [
-        "../rabbit-royale/src/*"
+        "./jeu/src/*"
       ],
       "@config/*": [
-        "../rabbit-royale/config/*"
+        "./jeu/config/*"
       ]
     },
     "skipLibCheck": true
@@ -20,6 +20,11 @@
   ],
   "exclude": [
     "node_modules",
-    "../rabbit-royale/node_modules"
+    "jeu/src/app",
+    "jeu/src/components",
+    "jeu/src/stories",
+    "jeu/src/lib/auth",
+    "jeu/src/lib/db",
+    "jeu/src/lib/pay"
   ]
 }

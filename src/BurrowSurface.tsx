@@ -20,11 +20,10 @@ import { StyleSheet, View } from 'react-native';
 import { Container } from 'pixi.js';
 
 import { PixiSurface, type ContexteJeu } from './PixiSurface';
-import { installerDomMoteur } from './dom-moteur';
+// Le moteur passe par ce module : il installe le DOM avant de l'importer.
+import { BurrowScene, loadAllAssets, PORTRAIT_W, PORTRAIT_H, landscapeCanvas } from './moteur';
 
-// AVANT tout import du moteur : `@/game/...` lit `window` des le chargement
-// de certains modules.
-installerDomMoteur();
+
 
 export type BurrowSurfaceProps = {
   /** La graine du terrier : l'id du joueur dont c'est le sol. */
@@ -39,16 +38,6 @@ export function BurrowSurface({ seed, level, onErreur }: BurrowSurfaceProps) {
 
   const onPret = useCallback(async ({ renderer, stage }: ContexteJeu) => {
     try {
-      // Imports paresseux : le moteur ne doit etre charge qu'APRES
-      // installerDomMoteur(), et seulement quand on ouvre le terrier.
-      const [{ BurrowScene }, appMod, { loadAllAssets }] = await Promise.all([
-        import('@/game/scenes/BurrowScene'),
-        import('@/game/Application'),
-        import('@/game/services/AssetLoader'),
-      ]);
-
-      // Le vrai chargeur du jeu : il passe par Assets.load de Pixi, donc par
-      // notre registre natif (pixi-rn-assets.ts).
       console.log('[RR-BURROW] chargement des assets...');
       let dernier = -1;
       await loadAllAssets((p) => {
@@ -65,8 +54,8 @@ export function BurrowSurface({ seed, level, onErreur }: BurrowSurfaceProps) {
       // L'espace de design, comme Application.resize() le calcule.
       const { width: w, height: h } = renderer;
       const portrait = h > w;
-      const gw = portrait ? appMod.PORTRAIT_W : appMod.landscapeCanvas(w, h).w;
-      const gh = portrait ? appMod.PORTRAIT_H : appMod.landscapeCanvas(w, h).h;
+      const gw = portrait ? PORTRAIT_W : landscapeCanvas(w, h).w;
+      const gh = portrait ? PORTRAIT_H : landscapeCanvas(w, h).h;
 
       // La racine mise a l'echelle : le moteur dessine en unites de design,
       // cette couche les amene a la taille de l'ecran.

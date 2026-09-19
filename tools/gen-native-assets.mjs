@@ -14,9 +14,16 @@
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, extname, relative } from 'node:path';
 
-// Les assets vivent dans le repo du jeu : on les reference, on ne les copie pas.
-const JEU = '../rabbit-royale';
-const RACINE = `${JEU}/public/assets`;
+/**
+ * Les assets sont COPIES dans ce projet (assets/game/), pas references chez
+ * le voisin : Metro exige des `require()` litteraux, et un chemin `../../`
+ * qui sort de la racine du projet est fragile — il a casse une fois de plus
+ * qu'il n'a servi. `tools/sync-assets.mjs` les remet a jour depuis le jeu.
+ *
+ * Le MOTEUR, lui, n'est pas copie : voir metro.config.js. 42 000 lignes en
+ * double divergeraient au premier correctif.
+ */
+const RACINE = 'assets/game';
 const SORTIE = 'src/asset-registry.ts';
 
 async function* parcourir(dir) {
@@ -32,8 +39,9 @@ for await (const f of parcourir(RACINE)) {
   const ext = extname(f).toLowerCase();
   // .png : les textures. .json : les atlas Aseprite, que Pixi lit tels quels.
   if (ext !== '.png' && ext !== '.json') continue;
-  const url = '/' + relative(`${JEU}/public`, f);
-  // Chemin relatif depuis src/asset-registry.ts
+  // L'URL telle que le jeu l'ecrit ('/assets/...'), et le chemin depuis
+  // src/asset-registry.ts.
+  const url = '/assets/' + relative(RACINE, f);
   const chemin = '../' + f;
   entrees.push([url, chemin]);
 }

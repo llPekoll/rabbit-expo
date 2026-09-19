@@ -17,6 +17,10 @@ import { Container, DOMAdapter, WebGLRenderer } from 'pixi.js';
 import { ReactNativeAdapter, setSharedGL } from './pixi-rn-adapter';
 import './pixi-rn-init';
 import { initAssetsRN, installerLoaderRN } from './pixi-rn-assets';
+// Import STATIQUE : un `await import('../jeu/src/game/island/slopes')` echouait a
+// l'execution ("Unable to resolve module ./rabbit-royale/..."), Metro
+// resolvant les imports dynamiques par un autre chemin que les statiques.
+import { setSlopeRenderer } from './moteur';
 
 export type ContexteJeu = {
   renderer: WebGLRenderer;
@@ -56,6 +60,11 @@ export function PixiSurface({ onPret, onFrame, style }: Props) {
       // 3. Les assets : registre natif + copie vers le cache (mur 9).
       initAssetsRN(gl, renderer);
       installerLoaderRN();
+
+      // 4. Les rampes de l'ile lisent et ecrivent des pixels par le renderer
+      //    (island/slopes.ts) plutot que par un canvas 2D, qui n'existe pas
+      //    ici. A poser avant qu'un terrain ne se construise.
+      setSlopeRenderer(renderer as any);
 
       const stage = new Container();
 

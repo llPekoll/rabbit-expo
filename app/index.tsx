@@ -12,7 +12,7 @@
  * CONNECT WALLET n'est pas encore branche : le Mobile Wallet Adapter viendra
  * ensuite. Il le DIT, plutot que de ne rien faire quand on le presse.
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -25,8 +25,11 @@ import { dict } from '../src/textes';
 import { LoreCrawl } from '../src/LoreCrawl';
 import { LanguePicker } from '../src/LanguePicker';
 import { BurrowSurface } from '../src/BurrowSurface';
+import { IslandSurface } from '../src/IslandSurface';
 
-const LOGO = require('../../rabbit-royale/public/assets/ui/rr-logo-1x.png');
+// Par le registre, comme tout le reste : `assets/game/` est la copie locale
+// des assets du jeu (voir tools/sync-assets.mjs).
+const LOGO = require('../assets/game/ui/rr-logo-1x.png');
 
 export default function Porte() {
   const {
@@ -37,6 +40,9 @@ export default function Porte() {
   const t = dict(locale);
 
   const surInvite = useCallback(() => { void jouerEnInvite(); }, [jouerEnInvite]);
+  // Quelle scene est a l'ecran. Le jeu enchaine terrier -> ile ; ici on
+  // bascule a la main, le temps de valider les deux.
+  const [scene, setScene] = useState<'terrier' | 'ile'>('terrier');
   const surWallet = useCallback(() => { void connecterWallet(); }, [connecterWallet]);
 
   // Session ouverte : le terrier. La graine est l'id du joueur — c'est de
@@ -45,15 +51,29 @@ export default function Porte() {
     return (
       <View style={styles.racine}>
         <Stack.Screen options={{ headerShown: false }} />
-        <BurrowSurface seed={joueur.id} level={1} />
+        {scene === 'terrier' ? (
+          <BurrowSurface seed={joueur.id} level={1} />
+        ) : (
+          <IslandSurface seed={`ile-${joueur.id}`} playerId={joueur.id} />
+        )}
         {/* Le chrome, au-dessus du canvas. Reduit au strict minimum pour
             l'instant : de quoi savoir qui joue et pouvoir ressortir. */}
         <SafeAreaView style={styles.chrome} pointerEvents="box-none">
           <View style={styles.barre} pointerEvents="box-none">
             <Text style={styles.nomJoueur}>{joueur.name}</Text>
-            <Pressable onPress={() => void deconnecter()} hitSlop={8}>
-              <Text style={styles.lienDiscretTexte}>{t.profile.disconnect}</Text>
-            </Pressable>
+            <View style={styles.actions}>
+              <Pressable
+                onPress={() => setScene(scene === 'terrier' ? 'ile' : 'terrier')}
+                hitSlop={8}
+              >
+                <Text style={styles.lienScene}>
+                  {scene === 'terrier' ? 'voir l\'ile' : 'voir le terrier'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => void deconnecter()} hitSlop={8}>
+                <Text style={styles.lienDiscretTexte}>{t.profile.disconnect}</Text>
+              </Pressable>
+            </View>
           </View>
         </SafeAreaView>
       </View>
@@ -133,6 +153,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingTop: 6,
   },
   nomJoueur: { color: '#e6edf3', fontSize: 13, fontWeight: '700' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  lienScene: { color: '#ffd45c', fontSize: 12, fontWeight: '700' },
   calque: { flex: 1, justifyContent: 'space-between' },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   masthead: { alignItems: 'center', paddingTop: 16 },

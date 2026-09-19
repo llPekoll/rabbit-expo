@@ -16,7 +16,7 @@
  * menu modal pour quatre entrees serait un ecran de plus a traverser.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LOCALE_LIST } from '@/i18n/locales';
+import { LOCALE_LIST } from '../jeu/src/i18n/locales';
 
 import type { Locale } from './textes';
 
